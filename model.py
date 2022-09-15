@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 
 random.seed(0) # used for shuffling data before splitting to train/val
 
-test = False
+testing = False
 show_examples = False
 weight_file = None
 batch_size = 16
@@ -53,7 +53,7 @@ while i < len(sys.argv):
             weight_decay = float(sys.argv[i+1])
             i += 2
         case '--test':
-            test = True
+            testing = True
             i += 1
         case '--show-examples':
             show_examples = True
@@ -107,7 +107,7 @@ def imshow(img, title=None):
         plt.title(title, loc='center', wrap=True)
     plt.show()
 
-def save_results():
+def save_results(w_best=None, err_best=None, errs=None, pred=None):
     # runid = largest runid in outdir + 1
     if not os.path.exists(outdir):
         os.mkdir(outdir)
@@ -118,10 +118,17 @@ def save_results():
         runid = max([int(x) for x in dirs]) + 1
     rundir = f'{outdir}{runid}/'
     os.mkdir(rundir)
+
     print(f'saving results to {rundir}')
-    err_df = pd.DataFrame({'err_train': err_train, 'err_val': err_val})
-    err_df.to_csv(f'{rundir}nrmse.csv', index=False)
-    torch.save(w_best, f'{rundir}w_best.pt')
+
+    if w_best:
+        torch.save(w_best, f'{rundir}w_best.pt')
+    if errs:
+        err_df = pd.DataFrame({'err_train': errs[0], 'err_val': errs[1]})
+        err_df.to_csv(f'{rundir}nrmse.csv', index=False)
+    if pred:
+        pred_df = pd.DataFrame({'labels': pred[0], 'predictions': pred[1]})
+        pred_df.to_csv(f'{rundir}predictions.csv', index=False)
 
 class GrassDataset(Dataset):
     def __init__(self, annotations_file, img_dir, transform=None):
@@ -143,8 +150,10 @@ class GrassDataset(Dataset):
         image = normalize_image(image)
         return image, label
 
+# returns nrmse, [[label], [prediction]]
 def epoch(train):
-    global err_train, err_val
+    labels_ep = []
+    outputs_ep = []
 
     if train:
         model.train()
@@ -152,14 +161,12 @@ def epoch(train):
     else:
         model.eval()
         dataloader = dataloader_val
-    labels_ep = []
-    outputs_ep = []
 
     for images, labels in dataloader:
         images = images.to(device)
         labels = labels.to(device)
         optimizer.zero_grad()
-        outputs = model(images).squeeze(1)
+        outputs = model(images).flatten()
         loss = criterion(outputs.float(), labels.float())                  
         if train:
             loss.backward()
@@ -168,29 +175,45 @@ def epoch(train):
         labels_ep += list(labels.detach().cpu().numpy())
         outputs_ep += list(outputs.detach().cpu().numpy())
 
-        img = images[0].detach().cpu()
         if show_examples:
+            img = images[0].detach().cpu()
             label = denormalize_label(labels[0].detach().cpu())
             pred = denormalize_label(outputs[0].detach().cpu())
             imshow(img, f"pred: {pred:.0f}, label: {label:.0f}")
     
     err = nrmse(labels_ep, outputs_ep)
-    if train: err_train.append(err)
-    else: err_val.append(err)
-    phase = 'train' if train else 'val'
-    print(f'{phase} nrmse: {err:.3f}')
-    return err
+    if train:
+        phase = 'train'
+    elif testing:
+        phase = 'test'
+    else:
+        phase = 'validation'
+    print(f'{phase} nrmse: {err*100:.1f}%')
+    labels_ep = [denormalize_label(l) for l in labels_ep]
+    outputs_ep = [denormalize_label(l) for l in outputs_ep]
+    predictions = [labels_ep, outputs_ep]
+    return err, predictions
 
+# returns w_best, err_best, [nrmse], [[label], [predicion]]
 def train():
-    global w_best, err_best
     print('training...')
+    errs_train = []
+    errs_val = []
+    err_best = np.inf
+    pred_best = []
+    w_best = copy.deepcopy(model.state_dict())
     for e in range(epochs):
         print(f'epoch {e+1}/{epochs}')
-        epoch(train=True)
-        err = epoch(train=False)
-        if err < err_best:
-            err_best = err
+        err_train, _ = epoch(train=True)
+        err_val, pred = epoch(train=False)
+        errs_train.append(err_train)
+        errs_val.append(err_val)
+        if err_val < err_best:
+            err_best = err_val
             w_best = copy.deepcopy(model.state_dict())
+            pred_best = pred
+    errs = [errs_train, errs_val]
+    return w_best, err_best, errs, pred_best
 
 # data
 transform_train = torch.nn.Sequential(
@@ -234,14 +257,9 @@ optimizer = torch.optim.AdamW(model.parameters(),
         weight_decay=weight_decay)
 
 # results
-w_best = copy.deepcopy(model.state_dict())
-err_best = np.inf
-err_train = []
-err_val = []
-
-if test:
+if testing:
     print('calculating predictions...')
-    epoch(train=False)
+    err, pred = epoch(train=False)
+    save_results(pred=pred)
 else:
-    train()
-    save_results()
+    save_results(train())
