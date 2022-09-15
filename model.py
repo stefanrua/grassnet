@@ -13,14 +13,41 @@ import os
 import pandas as pd
 import random
 import signal
+import sys
 import timm
 import torch
- 
+
+weight_file = None
 batch_size = 16
 epochs = 5
 learning_rate = 0.001
 valsplit = 0.2
 weight_decay = 0.01
+
+i = 1
+while i < len(sys.argv):
+    match sys.argv[i]:
+        case '--weights':
+            weight_file = sys.argv[i+1]
+            i += 2
+        case '--batch-size':
+            batch_size = int(sys.argv[i+1])
+            i += 2
+        case '--epochs':
+            epochs = int(sys.argv[i+1])
+            i += 2
+        case '--learning-rate':
+            learning_rate = float(sys.argv[i+1])
+            i += 2
+        case '--validation-split':
+            valsplit = float(sys.argv[i+1])
+            i += 2
+        case '--weight-decay':
+            weight_decay = float(sys.argv[i+1])
+            i += 2
+        case _:
+            print(f'unknown option: {sys.argv[i]}')
+            exit(1)
 
 imgdir = 'images/rgb/'
 labelfile = 'labels/dmy.csv'
@@ -157,6 +184,7 @@ dataloader_val = DataLoader(data_val,
         sampler=sampler_val)
 
 # model
+print('loading model...')
 model = timm.create_model('vgg16_bn',
         num_classes=1,
         pretrained=True,
