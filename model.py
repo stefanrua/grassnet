@@ -16,18 +16,20 @@ import signal
 import sys
 import timm
 import torch
+import matplotlib.pyplot as plt
 
 random.seed(0) # used for shuffling data before splitting to train/val
 
 test = False
+show_examples = False
 weight_file = None
 batch_size = 16
 epochs = 5
 learning_rate = 0.001
 valsplit = 0.2
 weight_decay = 0.01
-imgdir = 'images/rgb/'
-labelfile = 'labels/dmy.csv'
+imgdir = 'images/subset1/'
+labelfile = 'labels/subset1.csv'
 
 i = 1
 while i < len(sys.argv):
@@ -52,6 +54,9 @@ while i < len(sys.argv):
             i += 2
         case '--test':
             test = True
+            i += 1
+        case '--show-examples':
+            show_examples = True
             i += 1
         case '--image-dir':
             imgdir = sys.argv[i+1]
@@ -90,28 +95,17 @@ def denormalize_label(label):
 def denormalize_image(image):
     return image*255
 
-class GrassDataset(Dataset):
-    def __init__(self, annotations_file, img_dir, transform=None):
-        self.img_labels = pd.read_csv(annotations_file)
-        self.img_dir = img_dir
-        self.transform = transform
-
-    def __len__(self):
-        return len(self.img_labels)
-
-    def __getitem__(self, idx):
-        img_path = os.path.join(self.img_dir, self.img_labels.iloc[idx, 0])
-        image = Image.open(img_path).convert('RGB')
-        image = transforms.functional.pil_to_tensor(image)
-        image = normalize_image(image)
-        label = self.img_labels.iloc[idx, 1]
-        label = normalize_label(label)
-        if self.transform:
-            image = self.transform(image)
-        return image, label
-
 def nrmse(true, pred):
     return mean_squared_error(true, pred) / np.mean(true)
+
+def imshow(img, title=None):
+    img = img.numpy().transpose((1, 2, 0))
+    img = np.clip(img, 0, 1)
+    plt.axis('off')
+    plt.imshow(img)
+    if title:
+        plt.title(title, loc='center', wrap=True)
+    plt.show()
 
 def save_results():
     # runid = largest runid in outdir + 1
@@ -128,6 +122,26 @@ def save_results():
     err_df = pd.DataFrame({'err_train': err_train, 'err_val': err_val})
     err_df.to_csv(f'{rundir}nrmse.csv', index=False)
     torch.save(w_best, f'{rundir}w_best.pt')
+
+class GrassDataset(Dataset):
+    def __init__(self, annotations_file, img_dir, transform=None):
+        self.img_labels = pd.read_csv(annotations_file)
+        self.img_dir = img_dir
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.img_labels)
+
+    def __getitem__(self, idx):
+        img_path = os.path.join(self.img_dir, self.img_labels.iloc[idx, 0])
+        image = Image.open(img_path).convert('RGB')
+        label = self.img_labels.iloc[idx, 1]
+        label = normalize_label(label)
+        if self.transform:
+            image = self.transform(image)
+        image = transforms.functional.pil_to_tensor(image)
+        image = normalize_image(image)
+        return image, label
 
 def epoch(train):
     global err_train, err_val
@@ -153,12 +167,18 @@ def epoch(train):
 
         labels_ep += list(labels.detach().cpu().numpy())
         outputs_ep += list(outputs.detach().cpu().numpy())
+
+        img = images[0].detach().cpu()
+        if show_examples:
+            label = denormalize_label(labels[0].detach().cpu())
+            pred = denormalize_label(outputs[0].detach().cpu())
+            imshow(img, f"pred: {pred:.0f}, label: {label:.0f}")
     
     err = nrmse(labels_ep, outputs_ep)
     if train: err_train.append(err)
     else: err_val.append(err)
     phase = 'train' if train else 'val'
-    print(f'{phase} nrmse: {err:.3}')
+    print(f'{phase} nrmse: {err:.3f}')
     return err
 
 def train():
@@ -174,12 +194,13 @@ def train():
 
 # data
 transform_train = torch.nn.Sequential(
+        transforms.RandomEqualize(1),
         transforms.RandomHorizontalFlip(),
         transforms.RandomRotation((-180, 180)),
         transforms.CenterCrop(imgsize),
         )
-
 transform_val = torch.nn.Sequential(
+        transforms.RandomEqualize(1),
         transforms.CenterCrop(imgsize),
         )
 data_train = GrassDataset(labelfile, imgdir, transform_train)
