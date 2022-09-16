@@ -76,7 +76,7 @@ imgsize = 224
 def handler(signum, frame):
     res = input(' exit? y/n ')
     if res == 'y':
-        if len(err_val) > 0: save_results()
+        #if len(err_val) > 0: save_results()
         exit(1)
 
 signal.signal(signal.SIGINT, handler)
@@ -113,6 +113,8 @@ def save_results(w_best=None, err_best=None, errs=None, pred=None):
 
     print(f'saving results to {rundir}')
 
+    with open(f'{rundir}options.txt', 'w') as f:
+        f.write(' '.join(sys.argv))
     if w_best:
         torch.save(w_best, f'{rundir}w_best.pt')
     if errs:
