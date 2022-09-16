@@ -115,11 +115,14 @@ def save_results(w_best=None, err_best=None, errs=None, pred=None):
 
     with open(f'{rundir}options.txt', 'w') as f:
         f.write(' '.join(sys.argv))
+    if err_best:
+        err_best_df = pd.DataFrame({'nrmse': [err_best]})
+        err_best_df.to_csv(f'{rundir}results.csv', index=False)
     if w_best:
         torch.save(w_best, f'{rundir}w_best.pt')
     if errs:
         err_df = pd.DataFrame({'err_train': errs[0], 'err_val': errs[1]})
-        err_df.to_csv(f'{rundir}nrmse.csv', index=False)
+        err_df.to_csv(f'{rundir}nrmsecurve.csv', index=False)
         vis.errcurve(rundir)
     if pred:
         pred_df = pd.DataFrame({'label': pred[0], 'prediction': pred[1]})
@@ -257,7 +260,7 @@ optimizer = torch.optim.AdamW(model.parameters(),
 if testing:
     print('calculating predictions...')
     err, pred = epoch(train=False)
-    save_results(pred=pred)
+    save_results(err_best=err, pred=pred)
 else:
     w_best, err_best, errs, pred_best = train()
     save_results(w_best, err_best, errs, pred_best)

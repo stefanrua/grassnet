@@ -6,7 +6,7 @@ import numpy as np
 dpi=150
 
 def errcurve(rundir, save=True):
-    errs = pd.read_csv(f'{rundir}nrmse.csv')
+    errs = pd.read_csv(f'{rundir}nrmsecurve.csv')
     plt.plot(errs['err_train'], label='nrmse_train', color='gray')
     plt.plot(errs['err_val'], label='nrmse_val', color='black')
     plt.yscale('log')
