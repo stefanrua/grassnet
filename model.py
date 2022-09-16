@@ -257,4 +257,5 @@ if testing:
     err, pred = epoch(train=False)
     save_results(pred=pred)
 else:
-    save_results(train())
+    w_best, err_best, errs, pred_best = train()
+    save_results(w_best, err_best, errs, pred_best)
