@@ -17,6 +17,7 @@ import sys
 import timm
 import torch
 import matplotlib.pyplot as plt
+import visualisation as vis
 
 random.seed(0) # used for shuffling data before splitting to train/val
 
@@ -98,15 +99,6 @@ def denormalize_image(image):
 def nrmse(true, pred):
     return mean_squared_error(true, pred) / np.mean(true)
 
-def imshow(img, title=None):
-    img = img.numpy().transpose((1, 2, 0))
-    img = np.clip(img, 0, 1)
-    plt.axis('off')
-    plt.imshow(img)
-    if title:
-        plt.title(title, loc='center', wrap=True)
-    plt.show()
-
 def save_results(w_best=None, err_best=None, errs=None, pred=None):
     # runid = largest runid in outdir + 1
     if not os.path.exists(outdir):
@@ -126,9 +118,12 @@ def save_results(w_best=None, err_best=None, errs=None, pred=None):
     if errs:
         err_df = pd.DataFrame({'err_train': errs[0], 'err_val': errs[1]})
         err_df.to_csv(f'{rundir}nrmse.csv', index=False)
+        vis.errcurve(rundir)
     if pred:
-        pred_df = pd.DataFrame({'labels': pred[0], 'predictions': pred[1]})
+        pred_df = pd.DataFrame({'label': pred[0], 'prediction': pred[1]})
         pred_df.to_csv(f'{rundir}predictions.csv', index=False)
+        vis.predictions(rundir)
+        vis.labelhist(labelfile, rundir)
 
 class GrassDataset(Dataset):
     def __init__(self, annotations_file, img_dir, transform=None):
@@ -179,7 +174,7 @@ def epoch(train):
             img = images[0].detach().cpu()
             label = denormalize_label(labels[0].detach().cpu())
             pred = denormalize_label(outputs[0].detach().cpu())
-            imshow(img, f"pred: {pred:.0f}, label: {label:.0f}")
+            vis.imshow(img, f"pred: {pred:.0f}, label: {label:.0f}")
     
     err = nrmse(labels_ep, outputs_ep)
     if train:
@@ -194,7 +189,7 @@ def epoch(train):
     predictions = [labels_ep, outputs_ep]
     return err, predictions
 
-# returns w_best, err_best, [nrmse], [[label], [predicion]]
+# returns w_best, err_best, [[err_train], [err_val]], [[label], [predicion]]
 def train():
     print('training...')
     errs_train = []
