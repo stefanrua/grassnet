@@ -133,7 +133,7 @@ def save_results():
         pred_df = pd.DataFrame({'label': pred[0], 'prediction': pred[1]})
         pred_df.to_csv(f'{rundir}predictions.csv', index=False)
         vis.predictions(rundir)
-        vis.labelhist(labelfile, rundir)
+        if not testing: vis.labelhist(labelfile, rundir)
 
 class GrassDataset(Dataset):
     def __init__(self, annotations_file, img_dir, transform=None):
