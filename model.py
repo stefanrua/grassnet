@@ -73,10 +73,15 @@ outdir = 'out/'
 device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 imgsize = 224
 
+w_best = None
+err_best = np.inf
+errs = [[], []] # [[train], [val]]
+pred = [[], []] # [[label], [pred]]
+
 def handler(signum, frame):
     res = input(' exit? y/n ')
     if res == 'y':
-        #if len(err_val) > 0: save_results()
+        if w_best: save_results()
         exit(1)
 
 signal.signal(signal.SIGINT, handler)
@@ -99,7 +104,7 @@ def denormalize_image(image):
 def nrmse(true, pred):
     return mean_squared_error(true, pred) / np.mean(true)
 
-def save_results(w_best=None, err_best=None, errs=None, pred=None):
+def save_results():
     # runid = largest runid in outdir + 1
     if not os.path.exists(outdir):
         os.mkdir(outdir)
@@ -115,16 +120,16 @@ def save_results(w_best=None, err_best=None, errs=None, pred=None):
 
     with open(f'{rundir}options.txt', 'w') as f:
         f.write(' '.join(sys.argv))
-    if err_best:
+    if err_best < np.inf:
         err_best_df = pd.DataFrame({'nrmse': [err_best]})
         err_best_df.to_csv(f'{rundir}results.csv', index=False)
     if w_best:
         torch.save(w_best, f'{rundir}w_best.pt')
-    if errs:
+    if len(errs[0]) > 0:
         err_df = pd.DataFrame({'err_train': errs[0], 'err_val': errs[1]})
         err_df.to_csv(f'{rundir}nrmsecurve.csv', index=False)
         vis.errcurve(rundir)
-    if pred:
+    if len(pred[0]) > 0:
         pred_df = pd.DataFrame({'label': pred[0], 'prediction': pred[1]})
         pred_df.to_csv(f'{rundir}predictions.csv', index=False)
         vis.predictions(rundir)
@@ -194,26 +199,28 @@ def epoch(train):
     predictions = [labels_ep, outputs_ep]
     return err, predictions
 
-# returns w_best, err_best, [[err_train], [err_val]], [[label], [predicion]]
 def train():
     print('training...')
+    global w_best, err_best, errs, pred
     errs_train = []
     errs_val = []
     err_best = np.inf
     pred_best = []
-    w_best = copy.deepcopy(model.state_dict())
     for e in range(epochs):
         print(f'epoch {e+1}/{epochs}')
         err_train, _ = epoch(train=True)
-        err_val, pred = epoch(train=False)
-        errs_train.append(err_train)
-        errs_val.append(err_val)
+        err_val, pred_ep = epoch(train=False)
+        errs[0].append(err_train)
+        errs[1].append(err_val)
         if err_val < err_best:
             err_best = err_val
             w_best = copy.deepcopy(model.state_dict())
-            pred_best = pred
-    errs = [errs_train, errs_val]
-    return w_best, err_best, errs, pred_best
+            pred = pred_ep
+
+def test():
+    print('calculating predictions...')
+    global err_best, pred
+    err_best, pred = epoch(train=False)
 
 # data
 transform_train = torch.nn.Sequential(
@@ -258,9 +265,8 @@ optimizer = torch.optim.AdamW(model.parameters(),
 
 # results
 if testing:
-    print('calculating predictions...')
-    err, pred = epoch(train=False)
-    save_results(err_best=err, pred=pred)
+    test()
+    save_results()
 else:
-    w_best, err_best, errs, pred_best = train()
-    save_results(w_best, err_best, errs, pred_best)
+    train()
+    save_results()
