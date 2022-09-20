@@ -21,7 +21,8 @@ def errcurve(rundir, save=True):
 
 def predictions(rundir, save=True):
     pred = pd.read_csv(f'{rundir}predictions.csv')
-    plt.plot([0,10000], [0,10000], color='gray')
+    line = [min(pred['label']), max(pred['label'])]
+    plt.plot(line, line, color='gray')
     plt.plot(pred['label'], pred['prediction'],
             color='black',
             linestyle='',
@@ -37,10 +38,10 @@ def predictions(rundir, save=True):
         plt.show()
 
 def labelhist(labelfile, rundir, save=True):
-    b = 100
-    r = (0,10000)
     full = pd.read_csv(labelfile)
     pred = pd.read_csv(f'{rundir}predictions.csv')
+    b = 100
+    r = (0, max(pred['label']))
     plt.title('labels')
     plt.hist(full.iloc[:,1], bins=b, range=r, 
             color='lightgray',

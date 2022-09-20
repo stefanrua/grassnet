@@ -20,6 +20,7 @@ import matplotlib.pyplot as plt
 import visualisation as vis
 
 random.seed(0) # used for shuffling data before splitting to train/val
+config_file = 'config.py'
 
 testing = False
 show_examples = False
@@ -29,12 +30,17 @@ epochs = 5
 learning_rate = 0.001
 valsplit = 0.2
 weight_decay = 0.01
-imgdir = 'images/subset1/'
+imgdir = 'images/rgb/'
 labelfile = 'labels/subset1.csv'
+target = 'dmy' # supported: dmy, dvalue
+histogram_equalization = False
 
 i = 1
 while i < len(sys.argv):
     match sys.argv[i]:
+        case '--config':
+            config_file = sys.argv[i+1]
+            i += 2
         case '--weights':
             weight_file = sys.argv[i+1]
             i += 2
@@ -48,6 +54,7 @@ while i < len(sys.argv):
             learning_rate = float(sys.argv[i+1])
             i += 2
         case '--validation-split':
+            # --test sets this to 1
             valsplit = float(sys.argv[i+1])
             i += 2
         case '--weight-decay':
@@ -55,6 +62,7 @@ while i < len(sys.argv):
             i += 2
         case '--test':
             testing = True
+            valsplit = 1
             i += 1
         case '--show-examples':
             show_examples = True
@@ -65,13 +73,27 @@ while i < len(sys.argv):
         case '--labels':
             labelfile = sys.argv[i+1]
             i += 2
+        case '--target':
+            target = sys.argv[i+1]
+            i += 2
+        case '--histogram-equalization':
+            histogram_equalization = True
+            i += 1
         case _:
             print(f'unknown option: {sys.argv[i]}')
             exit(1)
 
+config = __import__(config_file.replace('.py', ''))
+
 outdir = 'out/'
 device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 imgsize = 224
+
+max_labels = {
+        'dmy': 10000,
+        'dvalue': 1000,
+        }
+max_label = max_labels[target]
 
 w_best = None
 err_best = np.inf
@@ -90,13 +112,13 @@ def getfid(fname):
     return int(fname.split('_id_')[1].split('.')[0])
 
 def normalize_label(label):
-    return label/10000
+    return label/max_label
 
 def normalize_image(image):
     return image/255
 
 def denormalize_label(label):
-    return label*10000
+    return label*max_label
 
 def denormalize_image(image):
     return image*255
@@ -223,14 +245,15 @@ def test():
     err_best, pred = epoch(train=False)
 
 # data
+eq = 1 if histogram_equalization else 0
 transform_train = torch.nn.Sequential(
-        transforms.RandomEqualize(1),
+        transforms.RandomEqualize(eq),
         transforms.RandomHorizontalFlip(),
         transforms.RandomRotation((-180, 180)),
         transforms.CenterCrop(imgsize),
         )
 transform_val = torch.nn.Sequential(
-        transforms.RandomEqualize(1),
+        transforms.RandomEqualize(eq),
         transforms.CenterCrop(imgsize),
         )
 data_train = GrassDataset(labelfile, imgdir, transform_train)
