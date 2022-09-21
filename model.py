@@ -131,6 +131,8 @@ def save_results():
     if not os.path.exists(outdir):
         os.mkdir(outdir)
     dirs = os.listdir(outdir)
+    dirs = [d.split('-')[0] for d in dirs] # allow appending a name to a run id,
+                                           # separated by a dash
     if len(dirs) == 0:
         runid = 0
     else:
