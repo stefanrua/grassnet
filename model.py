@@ -124,7 +124,7 @@ def denormalize_image(image):
     return image*255
 
 def nrmse(true, pred):
-    return mean_squared_error(true, pred) / np.mean(true)
+    return np.sqrt(mean_squared_error(true, pred)) / np.mean(true)
 
 def save_results():
     # runid = largest runid in outdir + 1
