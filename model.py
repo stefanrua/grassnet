@@ -226,10 +226,6 @@ def epoch(train):
 def train():
     print('training...')
     global w_best, err_best, errs, pred
-    errs_train = []
-    errs_val = []
-    err_best = np.inf
-    pred_best = []
     for e in range(epochs):
         print(f'epoch {e+1}/{epochs}')
         err_train, _ = epoch(train=True)
