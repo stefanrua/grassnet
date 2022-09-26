@@ -19,75 +19,26 @@ import torch
 import matplotlib.pyplot as plt
 import visualisation as vis
 
-random.seed(0) # used for shuffling data before splitting to train/val
-config_file = 'config.py'
-
-testing = False
-show_examples = False
-weight_file = None
-batch_size = 16
-epochs = 5
-learning_rate = 0.001
-valsplit = 0.2
-weight_decay = 0.01
-imgdir = 'images/rgb/'
-labelfile = 'labels/subset1.csv'
-target = 'dmy' # supported: dmy, dvalue
-histogram_equalization = False
-
-i = 1
-while i < len(sys.argv):
-    match sys.argv[i]:
-        case '--config':
-            config_file = sys.argv[i+1]
-            i += 2
-        case '--weights':
-            weight_file = sys.argv[i+1]
-            i += 2
-        case '--batch-size':
-            batch_size = int(sys.argv[i+1])
-            i += 2
-        case '--epochs':
-            epochs = int(sys.argv[i+1])
-            i += 2
-        case '--learning-rate':
-            learning_rate = float(sys.argv[i+1])
-            i += 2
-        case '--validation-split':
-            # --test sets this to 1
-            valsplit = float(sys.argv[i+1])
-            i += 2
-        case '--weight-decay':
-            weight_decay = float(sys.argv[i+1])
-            i += 2
-        case '--test':
-            testing = True
-            valsplit = 1
-            i += 1
-        case '--show-examples':
-            show_examples = True
-            i += 1
-        case '--image-dir':
-            imgdir = sys.argv[i+1]
-            i += 2
-        case '--labels':
-            labelfile = sys.argv[i+1]
-            i += 2
-        case '--target':
-            target = sys.argv[i+1]
-            i += 2
-        case '--histogram-equalization':
-            histogram_equalization = True
-            i += 1
-        case _:
-            print(f'unknown option: {sys.argv[i]}')
-            exit(1)
-
+config_file = sys.argv[1] if len(sys.argv) > 1 else 'config.py'
 config = __import__(config_file.replace('.py', ''))
+
+testing = config.testing
+show_examples = config.show_examples
+weight_file = config.weight_file
+batch_size = config.batch_size
+epochs = config.epochs
+learning_rate = config.learning_rate
+valsplit = config.valsplit
+weight_decay = config.weight_decay
+imgdir = config.imgdir
+labelfile = config.labelfile
+target = config.target
+histogram_equalization = config.histogram_equalization
 
 outdir = 'out/'
 device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 imgsize = 224
+random.seed(0) # used for shuffling data before splitting to train/val
 
 max_labels = {
         'dmy': 10000,
@@ -142,8 +93,7 @@ def save_results():
 
     print(f'saving results to {rundir}')
 
-    with open(f'{rundir}options.txt', 'w') as f:
-        f.write(' '.join(sys.argv))
+    os.system(f'cp {config_file} {rundir}config.py')
     if err_best < np.inf:
         err_best_df = pd.DataFrame({'nrmse': [err_best]})
         err_best_df.to_csv(f'{rundir}results.csv', index=False)

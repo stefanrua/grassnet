@@ -1,0 +1,12 @@
+testing = False
+show_examples = False
+weight_file = None
+batch_size = 16
+epochs = 100
+learning_rate = 0.001
+valsplit = 0.2
+weight_decay = 0.01
+imgdir = 'images/rgb/'
+labelfile = 'labels/subset1.csv'
+target = 'dmy'
+histogram_equalization = False
