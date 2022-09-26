@@ -20,7 +20,6 @@ import matplotlib.pyplot as plt
 import visualisation as vis
 
 random.seed(0) # used for shuffling data before splitting to train/val
-config_file = 'config.py'
 
 testing = False
 show_examples = False
@@ -31,59 +30,54 @@ learning_rate = 0.001
 valsplit = 0.2
 weight_decay = 0.01
 imgdir = 'images/rgb/'
-labelfile = 'labels/subset1.csv'
+labelfile = 'labels/dmy.csv'
 target = 'dmy' # supported: dmy, dvalue
 histogram_equalization = False
 
 i = 1
 while i < len(sys.argv):
-    match sys.argv[i]:
-        case '--config':
-            config_file = sys.argv[i+1]
-            i += 2
-        case '--weights':
-            weight_file = sys.argv[i+1]
-            i += 2
-        case '--batch-size':
-            batch_size = int(sys.argv[i+1])
-            i += 2
-        case '--epochs':
-            epochs = int(sys.argv[i+1])
-            i += 2
-        case '--learning-rate':
-            learning_rate = float(sys.argv[i+1])
-            i += 2
-        case '--validation-split':
-            # --test sets this to 1
-            valsplit = float(sys.argv[i+1])
-            i += 2
-        case '--weight-decay':
-            weight_decay = float(sys.argv[i+1])
-            i += 2
-        case '--test':
-            testing = True
-            valsplit = 1
-            i += 1
-        case '--show-examples':
-            show_examples = True
-            i += 1
-        case '--image-dir':
-            imgdir = sys.argv[i+1]
-            i += 2
-        case '--labels':
-            labelfile = sys.argv[i+1]
-            i += 2
-        case '--target':
-            target = sys.argv[i+1]
-            i += 2
-        case '--histogram-equalization':
-            histogram_equalization = True
-            i += 1
-        case _:
-            print(f'unknown option: {sys.argv[i]}')
-            exit(1)
-
-config = __import__(config_file.replace('.py', ''))
+    arg = sys.argv[i]
+    if arg == '--weights':
+        weight_file = sys.argv[i+1]
+        i += 2
+    elif arg == '--batch-size':
+        batch_size = int(sys.argv[i+1])
+        i += 2
+    elif arg == '--epochs':
+        epochs = int(sys.argv[i+1])
+        i += 2
+    elif arg == '--learning-rate':
+        learning_rate = float(sys.argv[i+1])
+        i += 2
+    elif arg == '--validation-split':
+        # --test sets this to 1
+        valsplit = float(sys.argv[i+1])
+        i += 2
+    elif arg == '--weight-decay':
+        weight_decay = float(sys.argv[i+1])
+        i += 2
+    elif arg == '--test':
+        testing = True
+        valsplit = 1
+        i += 1
+    elif arg == '--show-examples':
+        show_examples = True
+        i += 1
+    elif arg == '--image-dir':
+        imgdir = sys.argv[i+1]
+        i += 2
+    elif arg == '--labels':
+        labelfile = sys.argv[i+1]
+        i += 2
+    elif arg == '--target':
+        target = sys.argv[i+1]
+        i += 2
+    elif arg == '--histogram-equalization':
+        histogram_equalization = True
+        i += 1
+    else:
+        print(f'unknown option: {sys.argv[i]}')
+        exit(1)
 
 outdir = 'out/'
 device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
