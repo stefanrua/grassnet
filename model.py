@@ -33,6 +33,7 @@ imgdir = 'images/rgb/'
 labelfile = 'labels/dmy.csv'
 target = 'dmy' # supported: dmy, dvalue
 histogram_equalization = False
+arch = 'vgg16_bn'
 
 i = 1
 while i < len(sys.argv):
@@ -75,6 +76,9 @@ while i < len(sys.argv):
     elif arg == '--histogram-equalization':
         histogram_equalization = True
         i += 1
+    elif arg == '--arch':
+        arch = sys.argv[i+1]
+        i += 2
     else:
         print(f'unknown option: {sys.argv[i]}')
         exit(1)
@@ -266,7 +270,7 @@ dataloader_val = DataLoader(data_val,
 
 # model
 print('loading model...')
-model = timm.create_model('vgg16_bn',
+model = timm.create_model(arch,
         num_classes=1,
         pretrained=True,
         in_chans=3)
