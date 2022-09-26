@@ -21,6 +21,7 @@ import visualisation as vis
 
 random.seed(0) # used for shuffling data before splitting to train/val
 
+save_epoch = False
 testing = False
 show_examples = False
 weight_file = None
@@ -76,6 +77,9 @@ while i < len(sys.argv):
     elif arg == '--histogram-equalization':
         histogram_equalization = True
         i += 1
+    elif arg == '--save-epoch':
+        save_epoch = True
+        i += 1
     elif arg == '--arch':
         arch = sys.argv[i+1]
         i += 2
@@ -83,9 +87,22 @@ while i < len(sys.argv):
         print(f'unknown option: {sys.argv[i]}')
         exit(1)
 
-outdir = 'out/'
 device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 imgsize = 224
+
+outdir = 'out/'
+# runid = largest runid in outdir + 1
+if not os.path.exists(outdir):
+    os.mkdir(outdir)
+dirs = os.listdir(outdir)
+dirs = [d.split('-')[0] for d in dirs] # allow appending a name to a run id,
+                                       # separated by a dash
+if len(dirs) == 0:
+    runid = 0
+else:
+    runid = max([int(x) for x in dirs]) + 1
+rundir = f'{outdir}{runid}/'
+os.mkdir(rundir)
 
 max_labels = {
         'dmy': 10000,
@@ -125,21 +142,7 @@ def nrmse(true, pred):
     return np.sqrt(mean_squared_error(true, pred)) / np.mean(true)
 
 def save_results():
-    # runid = largest runid in outdir + 1
-    if not os.path.exists(outdir):
-        os.mkdir(outdir)
-    dirs = os.listdir(outdir)
-    dirs = [d.split('-')[0] for d in dirs] # allow appending a name to a run id,
-                                           # separated by a dash
-    if len(dirs) == 0:
-        runid = 0
-    else:
-        runid = max([int(x) for x in dirs]) + 1
-    rundir = f'{outdir}{runid}/'
-    os.mkdir(rundir)
-
     print(f'saving results to {rundir}')
-
     with open(f'{rundir}options.txt', 'w') as f:
         f.write(' '.join(sys.argv))
     if err_best < np.inf:
@@ -219,6 +222,7 @@ def epoch(train):
     labels_ep = [denormalize_label(l) for l in labels_ep]
     outputs_ep = [denormalize_label(l) for l in outputs_ep]
     predictions = [labels_ep, outputs_ep]
+    if save_epoch: save_results()
     return err, predictions
 
 def train():
@@ -285,7 +289,7 @@ optimizer = torch.optim.AdamW(model.parameters(),
 # results
 if testing:
     test()
-    save_results()
+    if not save_epoch: save_results()
 else:
     train()
-    save_results()
+    if not save_epoch: save_results()
