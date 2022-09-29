@@ -14,3 +14,4 @@ srun python3 -u model.py \
     --image-dir $LOCAL_SCRATCH/images/rgb/ \
     --labels labels/dmy-test.csv \
     --test \
+    --weights out/13-dmy-train/w_best.pt \

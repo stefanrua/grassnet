@@ -12,5 +12,6 @@ tar -xf /scratch/project_2005430/ruastefa/grassnet/images.tar -C $LOCAL_SCRATCH
 srun python3 -u model.py \
     --batch-size 64 \
     --image-dir $LOCAL_SCRATCH/images/rgb/ \
-    --labels labels/dvalue-train.csv \
+    --labels labels/dvalue-test.csv \
     --test \
+    --weights out/10-dvalue-train/w_best.pt \

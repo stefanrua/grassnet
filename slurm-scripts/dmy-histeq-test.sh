@@ -14,4 +14,6 @@ srun python3 -u model.py \
     --image-dir $LOCAL_SCRATCH/images/rgb/ \
     --labels labels/dmy-test.csv \
     --test \
-    --histogram-equalization
+    --histogram-equalization \
+    --run-name dmy-histeq-test \
+    --weights out/12-dmy-histeq-train/w_best.pt \
