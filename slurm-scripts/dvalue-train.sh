@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=dvalue
+#SBATCH --job-name=dvalue-train
 #SBATCH --account=project_2005430
 #SBATCH --partition=gpusmall
 #SBATCH --time=01:00:00
@@ -13,5 +13,4 @@ srun python3 -u model.py \
     --batch-size 64 \
     --epochs 100 \
     --image-dir $LOCAL_SCRATCH/images/rgb/ \
-    --labels labels/dvalue.csv \
-    --target dvalue
+    --labels labels/dvalue-train.csv \
