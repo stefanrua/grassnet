@@ -35,6 +35,7 @@ labelfile = 'labels/dmy.csv'
 target = 'dmy' # supported: dmy, dvalue
 histogram_equalization = False
 arch = 'vgg16_bn'
+run_name = None
 
 i = 1
 while i < len(sys.argv):
@@ -70,8 +71,14 @@ while i < len(sys.argv):
         i += 2
     elif arg == '--labels':
         labelfile = sys.argv[i+1]
+        if 'dmy' in labelfile:
+            target = 'dmy'
+        if 'dvalue' in labelfile:
+            target = 'dvalue'
+        run_name = labelfile.split('/')[-1].replace('.csv', '')
         i += 2
     elif arg == '--target':
+        # --labels can set this automatically based on filename
         target = sys.argv[i+1]
         i += 2
     elif arg == '--histogram-equalization':
@@ -82,6 +89,10 @@ while i < len(sys.argv):
         i += 1
     elif arg == '--arch':
         arch = sys.argv[i+1]
+        i += 2
+    elif arg == '--run-name':
+        # --labels sets this automatically
+        run_name = sys.argv[i+1]
         i += 2
     else:
         print(f'unknown option: {sys.argv[i]}')
@@ -101,7 +112,10 @@ if len(dirs) == 0:
     runid = 0
 else:
     runid = max([int(x) for x in dirs]) + 1
-rundir = f'{outdir}{runid}/'
+if run_name:
+    rundir = f'{outdir}{runid}-{run_name}/'
+else:
+    rundir = f'{outdir}{runid}/'
 os.mkdir(rundir)
 
 max_labels = {
