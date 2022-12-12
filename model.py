@@ -18,6 +18,8 @@ import timm
 import torch
 import matplotlib.pyplot as plt
 import visualisation as vis
+import kornia
+import cv2
 
 random.seed(0) # used for shuffling data before splitting to train/val
 
@@ -34,6 +36,7 @@ imgdir = 'images/rgb/'
 labelfile = 'labels/dmy.csv'
 target = 'dmy' # supported: dmy, dvalue
 histogram_equalization = False
+histogram_equalization_combined_channels = False
 arch = 'vgg16_bn'
 run_name = None
 
@@ -83,6 +86,9 @@ while i < len(sys.argv):
         i += 2
     elif arg == '--histogram-equalization':
         histogram_equalization = True
+        i += 1
+    elif arg == '--histogram-equalization-combined-channels':
+        histogram_equalization_combined_channels = True
         i += 1
     elif arg == '--save-epoch':
         save_epoch = True
@@ -259,6 +265,27 @@ def test():
     err_best, pred = epoch(train=False)
 
 # data
+
+class HisteqCombinedChannels(torch.nn.Module):
+    """
+    Equalize by pixel luminance instead of r, g, and b channels individually.
+    """
+    def __init__(self):
+        super().__init__()
+        self.topil = transforms.ToPILImage()
+
+    def __call__(self, x):
+        x = transforms.functional.pil_to_tensor(x)
+        x = x.to(torch.float32) / 255 # kornia assumes rgb to be [0, 1]
+        x = kornia.color.rgb_to_lab(x)
+        l = x[0] / 100 * 255 # cv2 uses [0, 255]
+        l = l.numpy().astype(np.uint8)
+        l = cv2.equalizeHist(l)
+        x[0] = torch.Tensor(l).to(torch.float32) / 255 * 100 # L is [0, 100]
+        x = kornia.color.lab_to_rgb(x)
+        x = self.topil(x)
+        return x
+
 eq = 1 if histogram_equalization else 0
 transform_train = torch.nn.Sequential(
         transforms.RandomEqualize(eq),
@@ -270,6 +297,9 @@ transform_val = torch.nn.Sequential(
         transforms.RandomEqualize(eq),
         transforms.CenterCrop(imgsize),
         )
+if histogram_equalization_combined_channels:
+    transform_train.append(HisteqCombinedChannels())
+    transform_val.append(HisteqCombinedChannels())
 data_train = GrassDataset(labelfile, imgdir, transform_train)
 data_val = GrassDataset(labelfile, imgdir, transform_val)
 N = len(data_train)
