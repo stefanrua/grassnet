@@ -16,4 +16,4 @@ srun python3 -u model.py \
     --test \
     --histogram-equalization-combined-channels \
     --run-name dmy-histeq-cc-test \
-    --weights out/??-dmy-histeq-cc-train/w_best.pt \
+    --weights out/25-dmy-histeq-cc-train/w_best.pt \

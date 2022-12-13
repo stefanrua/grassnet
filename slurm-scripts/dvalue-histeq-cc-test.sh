@@ -15,5 +15,5 @@ srun python3 -u model.py \
     --labels labels/dvalue-test.csv \
     --test \
     --histogram-equalization-combined-channels \
-    --run-name dvalue-histeq-cc-test
-    --weights out/??-dvalue-histeq-cc-train/w_best.pt \
+    --run-name dvalue-histeq-cc-test \
+    --weights out/24-dvalue-histeq-cc-train/w_best.pt \
